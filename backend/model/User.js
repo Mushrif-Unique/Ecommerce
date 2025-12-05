@@ -24,6 +24,7 @@ const schema = new mongoose.Schema({
         type:String,
         required:true,
     },
+    
 
 },{timestamps:true}); //user log-in log-out activity store
 
