@@ -3,8 +3,9 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken"; // to crate new activation key
 import sendMail from "../middleware/sendMail.js";
 
-//req your data 
-//res data send by the function
+//req - Client to Server (Data that gets from the user)
+//res - Server to Client (Data that we provide to the user)
+
 //New User Registration
 export const registerUser = async (req, res) => {
     try {
@@ -54,7 +55,6 @@ export const registerUser = async (req, res) => {
 };
 
 //Verify OTP
-
 export const verifyUser = async(req,res) => {
     try {
         //Getting the otp and verification token
@@ -91,3 +91,56 @@ export const verifyUser = async(req,res) => {
         });
     }
 };
+
+//Login user
+export const loginUser = async (req,res) => {
+    try {
+        const { email , password} = req.body;
+
+        //Check the User email addrss in the DB is it there
+        const user = await User.findOne({email});
+        if(!user){
+            return res.status(400).json({
+                message:"Invalid Credentials",
+            });
+        }
+
+        //Check Password
+        const matchPassword = await bcrypt.compare(password,user.password)
+        if(!matchPassword){
+            return res.status(500).json({
+                message:"Invalid Password",
+            });
+        }
+
+        //Generate Signed Token for if the password and email was correct
+        const token = jwt.sign({_id:user.id},process.env.JWT_SECRET,{expiresIn:"15d"});
+
+        //Exclude The Password Field Before sending Response
+        const {password:userPassword,...userDetails} = user.toObject();
+        return res.status(200).json({
+            message:`Welcome ${user.name}`,
+            token,
+            user:userDetails,
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            message: error.message,
+        });
+    }
+}
+
+//User Profile
+export const myProfile  = async(req,res) => {
+    try {
+        const user = await User.findById(req.user._id).select("-password");//select("-password") for exclude the pwd
+        return res.status(200).json({
+            user,
+        })
+    } catch (error) {
+        return res.status(500).json({
+            message: error.message,
+        })
+    }
+}
